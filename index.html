@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard de Ganhos – Bancos de Imagem</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="wrap fade-in">
+    <h1>Dashboard</h1>
+    <div class="subtitle">Stock Photos</div>
+
+    <div class="controls">
+      <div class="card">
+        <!-- OPÇÃO 1: UPLOAD LOCAL -->
+        <label for="jsonUpload">Opção 1: Carregar arquivo local (Seguro)</label>
+        <input type="file" id="jsonUpload" accept=".json" style="padding: 10px; height: auto;">
+
+        <!-- DIVISOR -->
+        <div style="text-align: center; color: var(--text-muted); margin: 20px 0;">OU</div>
+        
+        <!-- OPÇÃO 2: LINK DO GOOGLE DRIVE -->
+        <label for="driveUrlInput">Opção 2: Colar link do Google Drive</label>
+        <input type="url" id="driveUrlInput" placeholder="https://drive.google.com/uc?export=download&id=...">
+        <button id="loadFromUrlBtn" style="margin-top: 12px;">Carregar do Link</button>
+
+        <!-- FILTROS DE ANO E MÊS -->
+        <div class="filter-group" style="margin-top: 24px;">
+          <div>
+            <label for="yearSel">Ano</label>
+            <select id="yearSel"></select>
+          </div>
+          <div>
+            <label for="monthSel">Mês</label>
+            <select id="monthSel"></select>
+          </div>
+        </div>
+      </div>
+		
+      <div class="card">
+        <!-- SELETORES DE CATEGORIA E PLATAFORMA AGRUPADOS -->
+        <label for="categorySel">Categoria</label>
+        <select id="categorySel"></select>
+        
+        <label for="siteSel" style="margin-top: 16px;">Plataformas</label>
+        <select id="siteSel" multiple size="8"></select>
+        <button id="btnSelectAll" style="margin-top: 12px;">Selecionar Todas</button>
+      </div>
+
+      <div class="card">
+        <label for="currencySel">Moeda de exibição</label>
+        <select id="currencySel">
+          <option value="BRL" selected>BRL (R$)</option>
+          <option value="USD">USD ($)</option>
+          <option value="EUR">EUR (€)</option>
+        </select>
+        <div class="muted" style="margin-top:16px; font-size: 13px;">Taxas (editáveis):</div>
+        <div style="margin-bottom: 12px;">
+          <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer;">
+            <input id="useHistoricalRates" type="checkbox" style="width: auto; margin: 0;">
+            <span style="font-size: 13px; color: var(--text-secondary);">Usar taxas históricas reais (API)</span>
+          </label>
+          <div id="rateStatus" class="muted" style="font-size: 12px; margin-bottom: 8px;"></div>
+        </div>
+        <div class="currency-rates" id="manualRates">
+          <div>
+            <label for="rateUsdBrl">USD → BRL</label>
+            <input id="rateUsdBrl" type="number" step="0.0001" min="0" value="5.00">
+          </div>
+          <div>
+            <label for="rateEurBrl">EUR → BRL</label>
+            <input id="rateEurBrl" type="number" step="0.0001" min="0" value="6.00">
+          </div>
+        </div>
+        <div class="muted" style="margin-top:16px; font-size: 13px;">Imposto (Freepik em EUR):</div>
+        <div>
+          <label for="taxFreepik">Freepik: Imposto %</label>
+          <input id="taxFreepik" type="number" step="0.1" min="0" max="100" value="24">
+        </div>
+      </div>
+      <div class="card" style="display:flex;align-items:flex-end">
+        <button id="btnReset">Limpar filtros</button>
+      </div>
+    </div>
+
+    <div class="kpis">
+      <div class="card kpi">
+        <div class="label muted">Total do período (líquido)</div>
+        <div id="kpiTotal" class="value">—</div>
+        <div id="kpiYOY" class="delta"> </div>
+      </div>
+      <div class="card kpi">
+        <div class="label muted">Melhor mês (líquido)</div>
+        <div id="kpiBest" class="value">—</div>
+        <div class="muted info" id="kpiBestInfo"> </div>
+      </div>
+      <div class="card kpi">
+        <div class="label muted">Pior mês (líquido)</div>
+        <div id="kpiWorst" class="value">—</div>
+        <div class="muted info" id="kpiWorstInfo"> </div>
+      </div>
+      <div class="card kpi">
+        <div class="label muted">Ticket médio / mês (líquido)</div>
+        <div id="kpiAvg" class="value">—</div>
+        <div class="muted info" id="kpiCount"> </div>
+      </div>
+      <div class="card kpi">
+        <div class="label muted">Total Disponível (Bruto)</div>
+        <div id="kpiAvailableBalance" class="value">—</div>
+        <div class="muted info">Soma dos saldos não resgatados</div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="card chart-card">
+        <canvas id="lineTotals"></canvas>
+      </div>
+      <div class="card chart-card">
+        <canvas id="barPlatforms"></canvas>
+      </div>
+    </div>
+
+    <div class="table-grid">
+      <div class="card">
+        <div class="pill">Detalhe por plataforma</div>
+        <div class="table-container">
+          <table id="tblPlatforms">
+            <thead>
+              <tr>
+                <th>Plataforma</th>
+                <th>Bruto</th>
+                <th>Líquido</th>
+                <th>A Receber</th>
+                <th>% (sobre líquido)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot>
+              <tr>
+                <td>Total</td>
+                <td id="tblTotalBruto">—</td>
+                <td id="tblTotal">—</td>
+                <td id="tblTotalAReceber">—</td>
+                <td>100%</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="pill">Movimentação mensal</div>
+        <div class="table-container">
+          <table id="tblMonths">
+            <thead>
+              <!-- O cabeçalho é gerado dinamicamente -->
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <!-- BOTÃO "VER MAIS" ADICIONADO AQUI -->
+        <div class="toggle-container">
+          <button id="btnToggleMonths" class="btn-secondary" style="display: none;">Ver mais</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="pill">Saldo Disponível por Plataforma</div>
+        <div class="table-container">
+          <table id="tblAvailableBalance">
+            <thead>
+              <tr>
+                <th>Plataforma</th>
+                <th>Saldo Disponível (Bruto)</th>
+                <th>Limite P/ Resgate</th>
+                <th>Progresso</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- O conteúdo será gerado pelo JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <strong>💡 Dica:</strong> Selecione BRL para ver tudo convertido e somado (incluindo valores nativos de plataformas em Real); selecione USD para ver apenas plataformas em USD (valores nativos); selecione EUR para ver apenas plataformas em EUR (valores nativos). As taxas USD→BRL e EUR→BRL e o imposto do Freepik podem ser ajustados acima.
+      <br><br>
+      <strong>🌍 Taxas Históricas:</strong> Quando habilitadas, o sistema usa taxas de câmbio reais de cada mês via API (Frankfurter.app), proporcionando conversões mais precisas baseadas nos valores históricos reais.
+    </div>
+  </div>
+
+<script src="script.js"></script>
+</body>
+</html>

@@ -4,7 +4,7 @@
 
 // Mapeamento de cada site para sua categoria (NOVO)
 const SITE_CATEGORIES = {
-  "Fotos e Vídeos": ["Adobe Stock", "Freepik", "Shutterstock", "Getty Images", "Deposite Photos", "123RF", "Dreamstime", "Alamy"],
+  "Fotos e Vídeos": ["Adobe Stock", "Freepik", "Shutterstock", "Getty Images", "Deposite Photos", "123RF", "Dreamstime", "Alamy", "Pond5"],
   "Cursos": ["Udemy", "Hotmart", "Kiwify"],
   "Templates": ["Envato"]
 };

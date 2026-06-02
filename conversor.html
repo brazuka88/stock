@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ganhos → JSON</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 32px 20px;
+    }
+
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    h1 {
+      font-size: 1.3rem;
+      color: #fff;
+      text-align: center;
+    }
+
+    .card {
+      background: #1a1d27;
+      border: 1px solid #2a2d3e;
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 160px;
+    }
+
+    label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #7c83a0;
+    }
+
+    select, input {
+      background: #0f1117;
+      border: 1px solid #2a2d3e;
+      border-radius: 8px;
+      color: #e0e0e0;
+      padding: 10px 12px;
+      font-size: 0.9rem;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+
+    select:focus, input:focus { border-color: #5b6af0; }
+
+    /* Mês de início */
+    .start-month-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .start-month-row label {
+      white-space: nowrap;
+    }
+
+    .start-month-row select {
+      width: auto;
+      flex: 1;
+      min-width: 130px;
+    }
+
+    .paste-area {
+      background: #0f1117;
+      border: 2px dashed #2a2d3e;
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 0.88rem;
+      color: #5c6380;
+      outline: none;
+      min-height: 52px;
+      cursor: text;
+      transition: border-color 0.2s, color 0.2s;
+      white-space: pre-wrap;
+      word-break: break-all;
+      overflow-x: auto;
+    }
+
+    .paste-area:focus { border-color: #5b6af0; }
+    .paste-area.has-data { border-color: #3ecf8e55; color: #3ecf8e; }
+    .paste-area.error    { border-color: #e05b5b88; color: #e05b5b; }
+
+    .hint {
+      font-size: 0.73rem;
+      color: #5c6380;
+      line-height: 1.5;
+    }
+
+    .hint code { color: #5b6af0; }
+
+    /* Preview meses */
+    .months-preview {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+
+    .month-chip {
+      background: #0f1117;
+      border: 1px solid #2a2d3e;
+      border-radius: 8px;
+      padding: 8px 6px;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+
+    .month-chip .name {
+      font-size: 0.65rem;
+      color: #5c6380;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 4px;
+    }
+
+    .month-chip .val {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #7c83a0;
+    }
+
+    .month-chip.has-val  { border-color: #3ecf8e55; }
+    .month-chip.has-val .val  { color: #3ecf8e; }
+    .month-chip.null-val .val { color: #3a3f55; font-weight: 400; font-size: 0.72rem; }
+    .month-chip.zero-val .val { color: #5c6380; }
+
+    button {
+      padding: 11px 22px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    button:active { transform: scale(0.97); }
+    button:hover  { opacity: 0.85; }
+
+    .btn-primary { background: #5b6af0; color: #fff; }
+    .btn-success { background: #3ecf8e; color: #0f1117; }
+    .btn-neutral { background: #2a2d3e; color: #e0e0e0; }
+    .btn-danger  { background: #e05b5b; color: #fff; }
+    .btn-warning { background: #f0a83a; color: #0f1117; }
+
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .json-wrap { position: relative; }
+
+    pre#jsonOutput {
+      background: #0a0c14;
+      border: 1px solid #2a2d3e;
+      border-radius: 10px;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.76rem;
+      color: #a8d8a8;
+      white-space: pre;
+      overflow: auto;
+      max-height: 400px;
+      min-height: 60px;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 5px 12px;
+      font-size: 0.72rem;
+    }
+
+    .entry-item {
+      background: #0f1117;
+      border: 1px solid #2a2d3e;
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .entry-label { font-size: 0.84rem; color: #b0b8d4; }
+    .entry-total { font-size: 0.95rem; font-weight: 700; color: #3ecf8e; }
+
+    .remove-btn {
+      background: none;
+      border: 1px solid #e05b5b55;
+      color: #e05b5b;
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      border-radius: 6px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #3ecf8e;
+      color: #0f1117;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.84rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    .toast.show { opacity: 1; }
+
+    .section-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #7c83a0;
+    }
+
+    .import-area {
+      background: #0a0c14;
+      border: 1px solid #2a2d3e;
+      border-radius: 10px;
+      padding: 12px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.76rem;
+      color: #e0e0e0;
+      resize: vertical;
+      min-height: 90px;
+      width: 100%;
+      outline: none;
+    }
+
+    .import-area:focus { border-color: #5b6af0; }
+
+    details summary {
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: #5c6380;
+      padding: 4px 0;
+      user-select: none;
+    }
+
+    details[open] summary { color: #7c83a0; }
+
+    .debug-line {
+      font-size: 0.7rem;
+      color: #5c6380;
+      font-family: monospace;
+      margin-top: 4px;
+      min-height: 16px;
+    }
+
+    @media (max-width: 520px) {
+      .months-preview { grid-template-columns: repeat(4, 1fr); }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>📊 Ganhos → JSON</h1>
+
+  <!-- ENTRADA -->
+  <div class="card">
+    <div class="row">
+      <div class="field">
+        <label>Site</label>
+        <select id="siteSelect" onchange="onSiteChange()">
+          <option value="">— Selecione —</option>
+          <option>Adobe Stock</option>
+          <option>Freepik</option>
+          <option>Shutterstock</option>
+          <option>Getty Images</option>
+          <option>Deposite Photos</option>
+          <option>123RF</option>
+          <option>Dreamstime</option>
+          <option>Pond5</option>
+          <option>Alamy</option>
+          <option>Udemy</option>
+          <option>Envato</option>
+          <option>Hotmart</option>
+          <option value="__novo__">+ Novo site...</option>
+        </select>
+      </div>
+      <div class="field" id="novoSiteField" style="display:none">
+        <label>Nome do site</label>
+        <input type="text" id="novoSiteInput" placeholder="Ex: Pond5" />
+      </div>
+      <div class="field" style="max-width:110px">
+        <label>Ano</label>
+        <input type="number" id="yearInput" value="2025" min="2000" max="2100" />
+      </div>
+    </div>
+
+    <!-- Mês de início -->
+    <div class="start-month-row">
+      <label>Primeiro mês colado:</label>
+      <select id="startMonth">
+        <option value="0">Janeiro</option>
+        <option value="1">Fevereiro</option>
+        <option value="2">Março</option>
+        <option value="3">Abril</option>
+        <option value="4">Maio</option>
+        <option value="5">Junho</option>
+        <option value="6">Julho</option>
+        <option value="7">Agosto</option>
+        <option value="8">Setembro</option>
+        <option value="9">Outubro</option>
+        <option value="10">Novembro</option>
+        <option value="11">Dezembro</option>
+      </select>
+    </div>
+
+    <div>
+      <label style="display:block;margin-bottom:6px">Cole os valores (linha do Excel/Sheets)</label>
+      <div
+        class="paste-area"
+        id="pasteArea"
+        contenteditable="true"
+        spellcheck="false"
+        onpaste="handlePaste(event)"
+        oninput="handleInput()"
+        onkeydown="if(event.key==='Enter')event.preventDefault()"
+      >Cole aqui...</div>
+      <div class="debug-line" id="debugLine"></div>
+      <p class="hint" style="margin-top:6px">
+        Aceita Tab, espaço, vírgula ou ponto-e-vírgula como separador.<br>
+        Aceita <code>$</code>, vírgula decimal, traço ou vazio → <code>null</code>. Pode colar menos de 12 valores.
+      </p>
+    </div>
+
+    <!-- Preview meses -->
+    <div id="previewWrap" style="display:none">
+      <div class="months-preview" id="monthsPreview"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-primary" onclick="addEntry()">✅ Adicionar</button>
+      <button class="btn-neutral" onclick="clearPaste()">🔄 Limpar</button>
+    </div>
+  </div>
+
+  <!-- ENTRADAS -->
+  <div id="entriesCard" class="card" style="display:none">
+    <span class="section-title">Entradas adicionadas</span>
+    <div id="entriesList"></div>
+  </div>
+
+  <!-- IMPORTAR -->
+  <details>
+    <summary>📥 Importar JSON existente para continuar editando</summary>
+    <div class="card" style="margin-top:10px">
+      <textarea class="import-area" id="importInput" placeholder='Cole seu JSON aqui...'></textarea>
+      <div class="btn-row">
+        <button class="btn-warning" onclick="importJSON()">📥 Importar</button>
+        <button class="btn-danger"  onclick="resetAll()">🗑️ Resetar tudo</button>
+      </div>
+    </div>
+  </details>
+
+  <!-- JSON FINAL -->
+  <div class="card">
+    <span class="section-title">JSON gerado</span>
+    <div class="json-wrap">
+      <pre id="jsonOutput">// Adicione entradas para gerar o JSON</pre>
+      <button class="btn-neutral copy-btn" onclick="copyJSON()">📋 Copiar</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn-success" onclick="downloadJSON()">⬇️ Download JSON</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const MONTHS = [
+    'janeiro','fevereiro','marco','abril','maio','junho',
+    'julho','agosto','setembro','outubro','novembro','dezembro'
+  ];
+  const MONTH_LABELS = [
+    'Jan','Fev','Mar','Abr','Mai','Jun',
+    'Jul','Ago','Set','Out','Nov','Dez'
+  ];
+
+  let state = { sites: {}, availableBalances: {} };
+  let sessionEntries = [];
+  let parsedValues = []; // array esparso: índice = posição no ano (0=jan..11=dez), valor = number|null|undefined
+
+  // ── Helpers ───────────────────────────────────────────
+
+  function onSiteChange() {
+    const v = document.getElementById('siteSelect').value;
+    document.getElementById('novoSiteField').style.display =
+      v === '__novo__' ? 'flex' : 'none';
+  }
+
+  function getSite() {
+    const v = document.getElementById('siteSelect').value;
+    if (v === '__novo__') return document.getElementById('novoSiteInput').value.trim();
+    return v;
+  }
+
+  // ── Parser robusto ────────────────────────────────────
+  function parseRaw(raw) {
+    // Remove placeholder
+    if (!raw || raw.trim() === 'Cole aqui...') return null;
+
+    // Estratégia: split por Tab primeiro (planilha), depois fallback
+    let parts;
+
+    if (raw.includes('\t')) {
+      parts = raw.split('\t');
+    } else if (raw.includes(';')) {
+      parts = raw.split(';');
+    } else if (raw.includes(',')) {
+      // Pode ser separador OU decimal — heurística:
+      // se tiver padrão "número,número número" provavelmente é separador
+      // se tiver padrão "número,número" (menos itens) pode ser decimal
+      const commaSplit = raw.split(',');
+      // Se cada parte tem pelo menos um dígito e parece valor monetário → separador
+      // Caso contrário tenta espaço
+      const looksLikeSeparator = commaSplit.length > 1 &&
+        commaSplit.every(p => /[\d]/.test(p.trim()));
+      if (looksLikeSeparator && commaSplit.length > 2) {
+        parts = commaSplit;
+      } else {
+        parts = raw.split(/\s+/);
+      }
+    } else {
+      parts = raw.split(/\s+/);
+    }
+
+    return parts;
+  }
+
+  function cleanValue(str) {
+    if (!str && str !== 0) return null;
+    let s = String(str).trim();
+    if (s === '' || s === '-' || s.toLowerCase() === 'null' ||
+        s.toLowerCase() === 'n/a' || s === '—') return null;
+
+    // Remove símbolo de moeda e espaços
+    s = s.replace(/[$€£R$\s]/g, '');
+
+    // Troca vírgula decimal por ponto
+    // Mas só se não for separador (já dividimos antes)
+    s = s.replace(',', '.');
+
+    const n = parseFloat(s);
+    return isNaN(n) ? null : n;
+  }
+
+  // ── Paste / Input ─────────────────────────────────────
+  function handlePaste(e) {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text/plain');
+    const el = document.getElementById('pasteArea');
+    el.textContent = text;
+    processInput(text);
+  }
+
+  function handleInput() {
+    const text = document.getElementById('pasteArea').textContent;
+    processInput(text);
+  }
+
+  function processInput(raw) {
+    const el = document.getElementById('pasteArea');
+    const debug = document.getElementById('debugLine');
+
+    if (!raw || raw.trim() === '' || raw.trim() === 'Cole aqui...') {
+      parsedValues = [];
+      el.classList.remove('has-data', 'error');
+      document.getElementById('previewWrap').style.display = 'none';
+      debug.textContent = '';
+      return;
+    }
+
+    const parts = parseRaw(raw);
+    if (!parts || parts.length === 0) {
+      el.classList.add('error');
+      el.classList.remove('has-data');
+      debug.textContent = 'Não foi possível interpretar os valores.';
+      return;
+    }
+
+    const startIdx = parseInt(document.getElementById('startMonth').value);
+    const values = parts.slice(0, 12 - startIdx).map(cleanValue);
+
+    // Monta array de 12 posições (undefined = mês sem dado)
+    parsedValues = new Array(12).fill(undefined);
+    values.forEach((v, i) => {
+      parsedValues[startIdx + i] = v; // null = vazio, number = valor
+    });
+
+    const found = values.filter(v => v !== null).length;
+    const nulls  = values.filter(v => v === null).length;
+
+    el.classList.add('has-data');
+    el.classList.remove('error');
+    debug.textContent = `${parts.length} célula(s) detectada(s) · ${found} com valor · ${nulls} vazia(s)`;
+
+    renderPreview();
+  }
+
+  function renderPreview() {
+    document.getElementById('previewWrap').style.display = 'block';
+    const grid = document.getElementById('monthsPreview');
+    grid.innerHTML = MONTHS.map((m, i) => {
+      const v = parsedValues[i];
+      let cls, display;
+
+      if (v === undefined) {
+        cls = 'month-chip';
+        display = '<span style="color:#2a2d3e;font-size:0.7rem">—</span>';
+      } else if (v === null) {
+        cls = 'month-chip null-val';
+        display = 'null';
+      } else if (v === 0) {
+        cls = 'month-chip zero-val';
+        display = '0.00';
+      } else {
+        cls = 'month-chip has-val';
+        display = v.toFixed(2);
+      }
+
+      return `
+        <div class="${cls}">
+          <div class="name">${MONTH_LABELS[i]}</div>
+          <div class="val">${display}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function clearPaste() {
+    const el = document.getElementById('pasteArea');
+    el.textContent = 'Cole aqui...';
+    el.classList.remove('has-data', 'error');
+    parsedValues = [];
+    document.getElementById('previewWrap').style.display = 'none';
+    document.getElementById('debugLine').textContent = '';
+  }
+
+  // ── Add entry ─────────────────────────────────────────
+  function addEntry() {
+    const site = getSite();
+    const year = document.getElementById('yearInput').value.trim();
+
+    if (!site)  { toast('Selecione o site!', true); return; }
+    if (!year)  { toast('Informe o ano!', true); return; }
+    if (parsedValues.length === 0 || parsedValues.every(v => v === undefined)) {
+      toast('Cole os valores primeiro!', true); return;
+    }
+
+    const monthData = {};
+    parsedValues.forEach((v, i) => {
+      if (v !== undefined) monthData[MONTHS[i]] = v; // null vira null no JSON
+    });
+
+    if (!state.sites[site]) state.sites[site] = {};
+    if (!state.sites[site][year]) state.sites[site][year] = {};
+    Object.assign(state.sites[site][year], monthData);
+
+    const total = Object.values(monthData)
+      .filter(v => v !== null)
+      .reduce((a, b) => a + b, 0);
+
+    sessionEntries.push({ site, year, monthData, total });
+
+    clearPaste();
+    renderEntries();
+    updateJSON();
+    toast(`✅ ${site} ${year} adicionado!`);
+  }
+
+  // ── Entries ───────────────────────────────────────────
+  function renderEntries() {
+    const card = document.getElementById('entriesCard');
+    const list = document.getElementById('entriesList');
+
+    if (!sessionEntries.length) { card.style.display = 'none'; return; }
+    card.style.display = 'flex';
+
+    list.innerHTML = sessionEntries.map((e, i) => {
+      const detail = Object.entries(e.monthData)
+        .filter(([,v]) => v > 0)
+        .map(([m,v]) => `${m}: $${v.toFixed(2)}`)
+        .join(' · ') || '—';
+      return `
+        <div class="entry-item">
+          <div>
+            <div class="entry-label"><strong style="color:#fff">${e.site}</strong> — ${e.year}</div>
+            <div style="font-size:0.72rem;color:#5c6380;margin-top:3px">${detail}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="entry-total">$${e.total.toFixed(2)}</span>
+            <button class="remove-btn" onclick="removeEntry(${i})">✕</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function removeEntry(i) {
+    const e = sessionEntries[i];
+    if (state.sites[e.site]?.[e.year]) {
+      Object.keys(e.monthData).forEach(m => delete state.sites[e.site][e.year][m]);
+      if (!Object.keys(state.sites[e.site][e.year]).length) delete state.sites[e.site][e.year];
+      if (!Object.keys(state.sites[e.site]).length) delete state.sites[e.site];
+    }
+    sessionEntries.splice(i, 1);
+    renderEntries();
+    updateJSON();
+    toast('Entrada removida.');
+  }
+
+  // ── JSON ──────────────────────────────────────────────
+  function updateJSON() {
+    const out = document.getElementById('jsonOutput');
+    if (!Object.keys(state.sites).length) {
+      out.textContent = '// Adicione entradas para gerar o JSON';
+      return;
+    }
+
+    const ordered = { sites: {} };
+    Object.keys(state.sites).sort().forEach(site => {
+      ordered.sites[site] = {};
+      Object.keys(state.sites[site]).sort((a,b) => +a - +b).forEach(year => {
+        ordered.sites[site][year] = {};
+        MONTHS.forEach(m => {
+          if (m in state.sites[site][year])
+            ordered.sites[site][year][m] = state.sites[site][year][m];
+        });
+      });
+    });
+
+    if (Object.keys(state.availableBalances).length) {
+      ordered.availableBalances = {};
+      Object.keys(state.availableBalances).sort().forEach(s => {
+        ordered.availableBalances[s] = state.availableBalances[s];
+      });
+    }
+
+    out.textContent = JSON.stringify(ordered, null, 2);
+  }
+
+  function copyJSON() {
+    const t = document.getElementById('jsonOutput').textContent;
+    if (t.startsWith('//')) { toast('Nada para copiar!', true); return; }
+    navigator.clipboard.writeText(t).then(() => toast('📋 Copiado!'));
+  }
+
+  function downloadJSON() {
+    const t = document.getElementById('jsonOutput').textContent;
+    if (t.startsWith('//')) { toast('Nada para baixar!', true); return; }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([t], { type: 'application/json' }));
+    a.download = 'ganhos.json';
+    a.click();
+    toast('⬇️ Download iniciado!');
+  }
+
+  // ── Import / Reset ────────────────────────────────────
+  function importJSON() {
+    const raw = document.getElementById('importInput').value.trim();
+    if (!raw) { toast('Cole um JSON primeiro!', true); return; }
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed.sites) state.sites = parsed.sites;
+      if (parsed.availableBalances) state.availableBalances = parsed.availableBalances;
+      sessionEntries = [];
+      renderEntries();
+      updateJSON();
+      document.getElementById('importInput').value = '';
+      toast('✅ JSON importado!');
+    } catch {
+      toast('❌ JSON inválido!', true);
+    }
+  }
+
+  function resetAll() {
+    if (!confirm('Resetar tudo?')) return;
+    state = { sites: {}, availableBalances: {} };
+    sessionEntries = [];
+    renderEntries();
+    updateJSON();
+    clearPaste();
+    toast('🗑️ Resetado.');
+  }
+
+  // ── Toast ─────────────────────────────────────────────
+  function toast(msg, err = false) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.style.background = err ? '#e05b5b' : '#3ecf8e';
+    el.style.color = err ? '#fff' : '#0f1117';
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2500);
+  }
+
+  // Re-processa ao mudar mês de início
+  document.getElementById('startMonth').addEventListener('change', () => {
+    const text = document.getElementById('pasteArea').textContent;
+    if (text && text !== 'Cole aqui...') processInput(text);
+  });
+</script>
+</body>
+</html>
